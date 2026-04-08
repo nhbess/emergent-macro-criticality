@@ -1,5 +1,9 @@
 # Emergent Macro-Criticality from Micro-Critical Agents
 
+<p align="center">
+  <img src="./media/macro_cascade/macro_cascade_frames.png" alt="Macro cascade frames" width="900" />
+</p>
+
 This repository contains the code and artifacts for the paper **"Emergent Macro-Criticality from Micro-Critical Agents"**.
 
 The project studies how micro-level reservoir dynamics in agents relate to macro-level collective criticality (avalanche statistics, connectivity effects, sensing constraints, etc.).
