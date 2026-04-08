@@ -2,3 +2,4 @@
 *.npz
 *.yaml
 __pycache__/
+*.pdf

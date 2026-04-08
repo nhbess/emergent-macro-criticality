@@ -18,36 +18,44 @@
 
   <div id="info-box-modal">
     <h2>About this simulator</h2>
-    <p>Agents are static nodes on a 2D toroidal map. Each carries an independent
-    neural reservoir (Beggs &amp; Plenz, 2003). An agent's light turns ON when its
-    reservoir's last neuron fires; its light turns OFF otherwise. Agents observe
-    the lights of neighbours within their <em>vision radius</em> through
-    egocentric angular bins, which are clamped into the first neurons of their
-    reservoir at every macro step.</p>
+    <p>This simulator illustrates the core setup of the paper: how dynamical
+    regimes at the <strong>micro</strong> level (inside each agent) relate to
+    collective behavior at the <strong>macro</strong> level (across interacting
+    agents).</p>
+    <p>Agents are placed in a 2D toroidal space and communicate only through
+    binary light signals. Each agent contains an internal probabilistic
+    reservoir; its light state is read from a designated neuron. At each macro
+    step, agents receive egocentric exteroceptive observations of illuminated
+    neighbors within vision radius $v_r$, and these inputs perturb
+    their internal reservoir dynamics.</p>
+    <p>The key question is whether near-critical micro dynamics are sufficient to
+    produce macro-level critical-like avalanche statistics, or whether collective
+    behavior is primarily constrained by interaction topology and activity
+    propagation.</p>
 
     <h3>Reservoir · micro level</h3>
     <p>Each agent carries an independent <strong>Beggs–Plenz probabilistic reservoir</strong>
-    of <code>N</code> fully-connected neurons. At each micro step every active neuron
-    independently tries to activate every other with probability <code>p</code>.
-    For <code>n</code> active sources the firing probability of any target is:</p>
+    of $N$ fully-connected neurons. At each micro step every active neuron
+    independently tries to activate every other with probability $p$.
+    For $n$ active sources the firing probability of any target is:</p>
     <p class="math-display">$$P(\text{fires}) = 1 - (1-p)^n$$</p>
     <p class="math-display">$$\sigma = p\cdot(N-1),\quad p_c = \frac{1}{N-1}$$</p>
     <p>The <strong>branching ratio</strong> determines
-    the regime: at <code>&#x3c3; &lt; 1</code> activity dies exponentially
-    (subcritical); at <code>&#x3c3; &gt; 1</code> it grows without bound (supercritical);
-    at <code>&#x3c3; = 1</code> avalanches
+    the regime: at $\sigma < 1$ activity dies exponentially
+    (subcritical); at $\sigma > 1$ it grows without bound (supercritical);
+    at $\sigma = 1$ avalanches
     follow a power law (critical). The raster below shows neuron states (rows) over
-    time (columns). Drag <code>&#x3c3;</code> to explore the three regimes.</p>
+    time (columns). Drag $\sigma$ to explore the three regimes.</p>
 
     <div id="res-demo-wrap">
       <canvas id="res-demo-canvas"></canvas>
       <div class="rsl-row">
-        <span class="rsl-lbl">N neurons</span>
+        <span class="rsl-lbl">$N$ neurons</span>
         <input type="range" class="rsl-track" id="res-n-sl" min="64" max="255" value="64" step="1">
         <span class="rsl-val" id="res-n-val">64</span>
       </div>
       <div class="rsl-row">
-        <span class="rsl-lbl">&#x3c3; branching ratio</span>
+        <span class="rsl-lbl">$\sigma$ branching ratio</span>
         <input type="range" class="rsl-track" id="res-sigma-sl" min="0" max="200" value="100" step="1">
         <span class="rsl-val" id="res-sigma-val">1.00</span>
       </div>
@@ -62,17 +70,17 @@
 
     <h3>Macro level · collective dynamics</h3>
     <p>At the macro level, agents are coupled through perception: only neighbours
-    within <code>vision radius (vd)</code> contribute input to each reservoir. This
+    within vision radius $v_r$ contribute input to each reservoir. This
     spatial filtering reshapes collective dynamics even though all agents share the
-    same micro rule <code>p_micro</code>.</p>
-    <p>As shown in the paper, changing <code>vd</code> moves the <em>effective</em>
-    critical point in <code>p_micro</code>. In practice, the system is critical along
-    a band <code>p*(vd)</code> (the bright diagonal in the heatmap), not at a single
-    global p value.</p>
+    same micro rule $p_{\mathrm{micro}}$.</p>
+    <p>As shown in the paper, changing $v_r$ moves the <em>effective</em>
+    critical point in $p_{\mathrm{micro}}$. In practice, the system is critical along
+    a band $p^*(v_r)$ (the bright diagonal in the heatmap), not at a single
+    global $p$ value.</p>
     <p class="math-display">$$A(t)=\sum \text{lights}(t),\quad \hat{\sigma}_{eff},\quad \mathcal{L}$$</p>
     <p>From this signal we extract avalanche size and duration, estimate
-    <code>&#x03c3;&#x0302;_eff</code>, and compute the criticality score
-    <span class="ell-inline">&#x2112;</span> from power-law goodness-of-fit.</p>
+    $\hat{\sigma}_{\mathrm{eff}}$, and compute the criticality score
+    $\mathcal{L}$ from power-law goodness-of-fit.</p>
     <p>Interpretation by region: below the critical band activity quickly dies
     (subcritical), on the band avalanches are scale-free (critical), and above it
     activity tends to persist with many censored avalanches (supercritical).</p>
@@ -80,17 +88,17 @@
     <div id="macro-demo-wrap">
       <canvas id="macro-demo-canvas"></canvas>
       <div class="mdl-row">
-        <span class="mdl-lbl">&#x3c3; branching ratio</span>
+        <span class="mdl-lbl">$\sigma$ branching ratio</span>
         <input type="range" class="mdl-track" id="macro-vd-sl" min="0" max="200" value="100" step="1">
         <span class="mdl-val" id="macro-vd-val">1.00</span>
       </div>
       <div class="mdl-row">
-        <span class="mdl-lbl">vision distance</span>
+        <span class="mdl-lbl">$v_r$ vision distance</span>
         <input type="range" class="mdl-track" id="macro-vr-sl" min="20" max="120" value="70" step="1">
         <span class="mdl-val" id="macro-vr-val">70</span>
       </div>
       <div class="mdl-row">
-        <span class="mdl-lbl">segments / agent</span>
+        <span class="mdl-lbl">$E$ segments / agent</span>
         <input type="range" class="mdl-track" id="macro-sens-sl" min="4" max="16" value="8" step="1">
         <span class="mdl-val" id="macro-sens-val">8</span>
       </div>
@@ -108,11 +116,11 @@
     </div>
 
     <h3>Avalanche Extraction</h3>
-    <p>The same Beggs–Plenz <strong>micro</strong> rule as above, but with a <strong>fixed 64-neuron</strong>
+    <p>The same Beggs–Plenz <strong>micro</strong> rule as above, but with a <strong>fixed $N=64$ reservoir</strong>
     reservoir and <strong>no automatic reseeding</strong>. Each button press seeds a single
     active neuron at <strong>time 0 on the left</strong>; the raster fills toward the right
     for up to <strong>260 micro-timesteps</strong> (the observation window). Drag
-    <code>&#x3c3;</code> to see how far a cascade typically spreads before it dies.</p>
+    $\sigma$ to see how far a cascade typically spreads before it dies.</p>
     <p>Two kinds of events are set aside when building serious avalanche statistics — and this
     demo is meant to mirror that logic. First, cascades that <strong>still have activity when the
     window ends</strong> are <strong>censored</strong>: their true size and duration are unknown,
@@ -122,7 +130,7 @@
     the minimal initiating pattern (in practice, integrated <strong>size 1</strong>: only the seed
     column, then immediate quiescence; sometimes described as zero “length” in the sense of no
     propagated activity) — are too degenerate to inform a power-law tail. They may still appear in
-    raw tallies, but the paper’s MLE uses <code>x<sub>min</sub> = 2</code> on both size and duration,
+    raw tallies, but the paper’s MLE uses $x_{\min}=2$ on both size and duration,
     which <strong>excludes</strong> those smallest events from <strong>fitting</strong> only.</p>
     <p>The raster uses <strong>micro</strong> dynamics, but the <strong>measurement recipe</strong>
     is the same one used at <strong>macro</strong> in the live simulator: at each time step, add the
@@ -135,7 +143,7 @@
     <div id="av-extr-demo-wrap">
       <canvas id="av-extr-canvas"></canvas>
       <div class="rsl-row">
-        <span class="rsl-lbl">&#x3c3; branching ratio</span>
+        <span class="rsl-lbl">$\sigma$ branching ratio</span>
         <input type="range" class="rsl-track" id="av-extr-sigma-sl" min="0" max="200" value="100" step="1">
         <span class="rsl-val" id="av-extr-sigma-val">1.00</span>
       </div>
@@ -145,27 +153,27 @@
       </div>
       <p class="eq-center">
         <em>Note:</em> unlike the scrolling micro-level raster (recent time on the right),
-        here <code>t = 0</code> is fixed at the left. A full window with ongoing activity is
+        here $t=0$ is fixed at the left. A full window with ongoing activity is
         censored (excluded like an unfinished macro rep). Activity is never reseeded; press the
         button again for a new realization.
       </p>
     </div>
 
     <h3>Parameters</h3>
-    <p><code>vision radius (vd)</code> — spatial coupling range. Larger vd means more
+    <p>$v_r$ (vision radius) — spatial coupling range. Larger $v_r$ means more
     neighbours per agent and stronger macro-level coupling.</p>
-    <p><code>p_micro</code> — homogeneous connection weight in each reservoir.
-    The reservoir critical point is <code>p_c = 1/(N&#8209;1)</code> where N is the
+    <p>$p_{\mathrm{micro}}$ — homogeneous connection weight in each reservoir.
+    The reservoir critical point is $p_c = 1/(N-1)$ where $N$ is the
     number of neurons. Below p_c activity dies; above it, it self-sustains.</p>
 
     <h3>Avalanche size &amp; duration</h3>
     <p>An <em>avalanche</em> is a maximal contiguous run of macro steps where at least
-    one agent is lit (<code>&#x2211; lights &gt; 0</code>). Its <strong>size</strong>
+    one agent is lit ($A_l(t)=\sum_i l_i(t)>0$). Its <strong>size</strong>
     is the cumulative count of active agents summed over all steps in the run;
     its <strong>duration</strong> is the number of steps. Avalanches that are still
     active at the end of a rep window are discarded (censored), matching the
     paper&#8217;s methodology. Smallest (trivial) events are handled separately when
-    estimating power-law exponents (<code>x<sub>min</sub> = 2</code>); see Avalanche Extraction above.</p>
+    estimating power-law exponents ($x_{\min}=2$); see Avalanche Extraction above.</p>
 
     <h3>Criticality &amp; power laws</h3>
     <p class="math-display">$$P(x)\propto x^{-\alpha},\quad x_{min}=2$$</p>
@@ -174,13 +182,13 @@
     <h3>Plots</h3>
     <p><strong>Agent canvas</strong> — live simulation. Edges shown when adjacency
     is toggled on.</p>
-    <p><strong>&#963;&#x0302;_eff curve</strong> — effective branching ratio estimated
-    from pre-computed paper data across p values at the selected vision radius.
-    The dashed vertical line marks the current p setting.</p>
-    <p><strong>Criticality score &#x2112; heatmap</strong> — pre-computed from paper
+    <p><strong>$\hat{\sigma}_{\mathrm{eff}}$ curve</strong> — effective branching ratio estimated
+    from pre-computed paper data across $p$ values at the selected vision radius.
+    The dashed vertical line marks the current $p$ setting.</p>
+    <p><strong>Criticality score $\mathcal{L}$ heatmap</strong> — pre-computed from paper
     data. Each cell is the KS-based goodness-of-fit score for power-law
-    avalanche distributions (higher = more critical). X axis: p_micro;
-    Y axis: vision radius. Click any cell to jump to those parameters.</p>
+    avalanche distributions (higher = more critical). X axis: $p_{\mathrm{micro}}$;
+    Y axis: $v_r$. Click any cell to jump to those parameters.</p>
     <p><strong>Avalanche distributions (log-log)</strong> — live, accumulated across
     all reps since the last parameter change. Orange: size distribution;
     purple: duration distribution. Statistics are from the current single

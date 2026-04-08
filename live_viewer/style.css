@@ -146,6 +146,11 @@ button:hover{background:var(--border-default)}
   margin:2px 0;
 }
 
+#info-box-modal .katex,
+#info-box-modal .katex-display{
+  color:var(--node-on);
+}
+
 #res-demo-wrap,
 #macro-demo-wrap,
 #av-extr-demo-wrap{
