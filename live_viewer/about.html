@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Micro-Macro Criticality · About</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+</head>
+<body>
+<div id="app">
+  <header class="page-header">
+    <h1 class="title-inline">
+      Micro-Macro Criticality
+      <span class="subtitle-note">· About</span>
+    </h1>
+  </header>
+
+  <div id="info-box-modal">
+    <h2>About this simulator</h2>
+    <p>Agents are static nodes on a 2D toroidal map. Each carries an independent
+    neural reservoir (Beggs &amp; Plenz, 2003). An agent's light turns ON when its
+    reservoir's last neuron fires; its light turns OFF otherwise. Agents observe
+    the lights of neighbours within their <em>vision radius</em> through
+    egocentric angular bins, which are clamped into the first neurons of their
+    reservoir at every macro step.</p>
+
+    <h3>Reservoir · micro level</h3>
+    <p>Each agent carries an independent <strong>Beggs–Plenz probabilistic reservoir</strong>
+    of <code>N</code> fully-connected neurons. At each micro step every active neuron
+    independently tries to activate every other with probability <code>p</code>.
+    For <code>n</code> active sources the firing probability of any target is:</p>
+    <p class="math-display">$$P(\text{fires}) = 1 - (1-p)^n$$</p>
+    <p class="math-display">$$\sigma = p\cdot(N-1),\quad p_c = \frac{1}{N-1}$$</p>
+    <p>The <strong>branching ratio</strong> determines
+    the regime: at <code>&#x3c3; &lt; 1</code> activity dies exponentially
+    (subcritical); at <code>&#x3c3; &gt; 1</code> it grows without bound (supercritical);
+    at <code>&#x3c3; = 1</code> avalanches
+    follow a power law (critical). The raster below shows neuron states (rows) over
+    time (columns). Drag <code>&#x3c3;</code> to explore the three regimes.</p>
+
+    <div id="res-demo-wrap">
+      <canvas id="res-demo-canvas"></canvas>
+      <div class="rsl-row">
+        <span class="rsl-lbl">N neurons</span>
+        <input type="range" class="rsl-track" id="res-n-sl" min="64" max="255" value="64" step="1">
+        <span class="rsl-val" id="res-n-val">64</span>
+      </div>
+      <div class="rsl-row">
+        <span class="rsl-lbl">&#x3c3; branching ratio</span>
+        <input type="range" class="rsl-track" id="res-sigma-sl" min="0" max="200" value="100" step="1">
+        <span class="rsl-val" id="res-sigma-val">1.00</span>
+      </div>
+      <div class="about-center">
+        <div id="res-demo-info"></div>
+        <button id="res-play-btn" class="about-btn">&#9656; Play</button>
+      </div>
+      <p class="eq-center">
+        <em>Note:</em> this demo auto-seeds whenever activity fully dies; the brief flashing frame indicates a reseeding event.
+      </p>
+    </div>
+
+    <h3>Macro level · collective dynamics</h3>
+    <p>At the macro level, agents are coupled through perception: only neighbours
+    within <code>vision radius (vd)</code> contribute input to each reservoir. This
+    spatial filtering reshapes collective dynamics even though all agents share the
+    same micro rule <code>p_micro</code>.</p>
+    <p>As shown in the paper, changing <code>vd</code> moves the <em>effective</em>
+    critical point in <code>p_micro</code>. In practice, the system is critical along
+    a band <code>p*(vd)</code> (the bright diagonal in the heatmap), not at a single
+    global p value.</p>
+    <p class="math-display">$$A(t)=\sum \text{lights}(t),\quad \hat{\sigma}_{eff},\quad \mathcal{L}$$</p>
+    <p>From this signal we extract avalanche size and duration, estimate
+    <code>&#x03c3;&#x0302;_eff</code>, and compute the criticality score
+    <span class="ell-inline">&#x2112;</span> from power-law goodness-of-fit.</p>
+    <p>Interpretation by region: below the critical band activity quickly dies
+    (subcritical), on the band avalanches are scale-free (critical), and above it
+    activity tends to persist with many censored avalanches (supercritical).</p>
+
+    <div id="macro-demo-wrap">
+      <canvas id="macro-demo-canvas"></canvas>
+      <div class="mdl-row">
+        <span class="mdl-lbl">&#x3c3; branching ratio</span>
+        <input type="range" class="mdl-track" id="macro-vd-sl" min="0" max="200" value="100" step="1">
+        <span class="mdl-val" id="macro-vd-val">1.00</span>
+      </div>
+      <div class="mdl-row">
+        <span class="mdl-lbl">vision distance</span>
+        <input type="range" class="mdl-track" id="macro-vr-sl" min="20" max="120" value="70" step="1">
+        <span class="mdl-val" id="macro-vr-val">70</span>
+      </div>
+      <div class="mdl-row">
+        <span class="mdl-lbl">segments / agent</span>
+        <input type="range" class="mdl-track" id="macro-sens-sl" min="4" max="16" value="8" step="1">
+        <span class="mdl-val" id="macro-sens-val">8</span>
+      </div>
+      <div class="about-center">
+        <div id="macro-demo-info"></div>
+        <div class="about-btn-row">
+          <button id="macro-play-btn" class="about-btn">&#9646;&#9646; Pause</button>
+        </div>
+      </div>
+      <p class="eq-center">
+        <em>Single embedded-criticality agent:</em> 64-neuron reservoir (8×8) with
+        sensor neurons on the contour and a light neuron at the center.
+        Click contour sensors to inject input and trigger a cascade.
+      </p>
+    </div>
+
+    <h3>Avalanche Extraction</h3>
+    <p>The same Beggs–Plenz <strong>micro</strong> rule as above, but with a <strong>fixed 64-neuron</strong>
+    reservoir and <strong>no automatic reseeding</strong>. Each button press seeds a single
+    active neuron at <strong>time 0 on the left</strong>; the raster fills toward the right
+    for up to <strong>260 micro-timesteps</strong> (the observation window). Drag
+    <code>&#x3c3;</code> to see how far a cascade typically spreads before it dies.</p>
+    <p>Two kinds of events are set aside when building serious avalanche statistics — and this
+    demo is meant to mirror that logic. First, cascades that <strong>still have activity when the
+    window ends</strong> are <strong>censored</strong>: their true size and duration are unknown,
+    so they are <strong>excluded</strong> from distributions that require a complete avalanche
+    (in <code>index.html</code>, an avalanche still open at the end of a rep is dropped the same way).
+    Second, <strong>trivial</strong> cascades — those with <strong>no real extent</strong> beyond
+    the minimal initiating pattern (in practice, integrated <strong>size 1</strong>: only the seed
+    column, then immediate quiescence; sometimes described as zero “length” in the sense of no
+    propagated activity) — are too degenerate to inform a power-law tail. They may still appear in
+    raw tallies, but the paper’s MLE uses <code>x<sub>min</sub> = 2</code> on both size and duration,
+    which <strong>excludes</strong> those smallest events from <strong>fitting</strong> only.</p>
+    <p>The raster uses <strong>micro</strong> dynamics, but the <strong>measurement recipe</strong>
+    is the same one used at <strong>macro</strong> in the live simulator: at each time step, add the
+    number of active <strong>units</strong> (here, neurons in one reservoir; there, agents with the
+    light neuron ON), and sum that over the avalanche until activity hits zero within the window.
+    Only the choice of elementary unit changes; the construction is <strong>scale-independent</strong>.
+    <strong>Time 0 includes the seed</strong>, so the reported size is integrated activity through
+    the cascade, not a separate “postsynaptic-only” count with the drive removed.</p>
+
+    <div id="av-extr-demo-wrap">
+      <canvas id="av-extr-canvas"></canvas>
+      <div class="rsl-row">
+        <span class="rsl-lbl">&#x3c3; branching ratio</span>
+        <input type="range" class="rsl-track" id="av-extr-sigma-sl" min="0" max="200" value="100" step="1">
+        <span class="rsl-val" id="av-extr-sigma-val">1.00</span>
+      </div>
+      <div class="about-center">
+        <div id="av-extr-info"></div>
+        <button type="button" id="av-extr-fire-btn" class="about-btn">Fire one cascade</button>
+      </div>
+      <p class="eq-center">
+        <em>Note:</em> unlike the scrolling micro-level raster (recent time on the right),
+        here <code>t = 0</code> is fixed at the left. A full window with ongoing activity is
+        censored (excluded like an unfinished macro rep). Activity is never reseeded; press the
+        button again for a new realization.
+      </p>
+    </div>
+
+    <h3>Parameters</h3>
+    <p><code>vision radius (vd)</code> — spatial coupling range. Larger vd means more
+    neighbours per agent and stronger macro-level coupling.</p>
+    <p><code>p_micro</code> — homogeneous connection weight in each reservoir.
+    The reservoir critical point is <code>p_c = 1/(N&#8209;1)</code> where N is the
+    number of neurons. Below p_c activity dies; above it, it self-sustains.</p>
+
+    <h3>Avalanche size &amp; duration</h3>
+    <p>An <em>avalanche</em> is a maximal contiguous run of macro steps where at least
+    one agent is lit (<code>&#x2211; lights &gt; 0</code>). Its <strong>size</strong>
+    is the cumulative count of active agents summed over all steps in the run;
+    its <strong>duration</strong> is the number of steps. Avalanches that are still
+    active at the end of a rep window are discarded (censored), matching the
+    paper&#8217;s methodology. Smallest (trivial) events are handled separately when
+    estimating power-law exponents (<code>x<sub>min</sub> = 2</code>); see Avalanche Extraction above.</p>
+
+    <h3>Criticality &amp; power laws</h3>
+    <p class="math-display">$$P(x)\propto x^{-\alpha},\quad x_{min}=2$$</p>
+    <p>The MLE exponent &#x3b1; is estimated via the discrete Clauset et al. (2009) formula.</p>
+
+    <h3>Plots</h3>
+    <p><strong>Agent canvas</strong> — live simulation. Edges shown when adjacency
+    is toggled on.</p>
+    <p><strong>&#963;&#x0302;_eff curve</strong> — effective branching ratio estimated
+    from pre-computed paper data across p values at the selected vision radius.
+    The dashed vertical line marks the current p setting.</p>
+    <p><strong>Criticality score &#x2112; heatmap</strong> — pre-computed from paper
+    data. Each cell is the KS-based goodness-of-fit score for power-law
+    avalanche distributions (higher = more critical). X axis: p_micro;
+    Y axis: vision radius. Click any cell to jump to those parameters.</p>
+    <p><strong>Avalanche distributions (log-log)</strong> — live, accumulated across
+    all reps since the last parameter change. Orange: size distribution;
+    purple: duration distribution. Statistics are from the current single
+    trajectory; supercritical regimes require ensemble averaging (as in the
+    paper) to reveal power-law tails.</p>
+  </div>
+</div>
+
+<script src="math.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    if (window.renderMathInElement) {
+      renderMathInElement(document.body, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false }
+        ],
+        throwOnError: false
+      });
+    }
+
+    const resCanvas = document.getElementById("res-demo-canvas");
+    const nSlider = document.getElementById("res-n-sl");
+    const sigmaSlider = document.getElementById("res-sigma-sl");
+    const nVal = document.getElementById("res-n-val");
+    const sigmaVal = document.getElementById("res-sigma-val");
+    const info = document.getElementById("res-demo-info");
+    const playBtn = document.getElementById("res-play-btn");
+    if (!resCanvas || !nSlider || !sigmaSlider || !nVal || !sigmaVal || !info || !playBtn) return;
+    const macroCanvas = document.getElementById("macro-demo-canvas");
+    const macroP = document.getElementById("macro-vd-sl");
+    const macroVr = document.getElementById("macro-vr-sl");
+    const macroSens = document.getElementById("macro-sens-sl");
+    const macroPVal = document.getElementById("macro-vd-val");
+    const macroVrVal = document.getElementById("macro-vr-val");
+    const macroSensVal = document.getElementById("macro-sens-val");
+    const macroPlayBtn = document.getElementById("macro-play-btn");
+    const macroInfo = document.getElementById("macro-demo-info");
+    const avExtrCanvas = document.getElementById("av-extr-canvas");
+    const avExtrSigmaSl = document.getElementById("av-extr-sigma-sl");
+    const avExtrSigmaVal = document.getElementById("av-extr-sigma-val");
+    const avExtrInfo = document.getElementById("av-extr-info");
+    const avExtrFireBtn = document.getElementById("av-extr-fire-btn");
+
+    const ctx = resCanvas.getContext("2d");
+    let running = false;
+    let rafId = null;
+    let reseedFlash = 0;
+    let macroHeading = -Math.PI / 2;
+    const MACRO_N = 64;
+    const MACRO_SENSOR_N = 16;
+    let macroRes = new Uint8Array(MACRO_N);
+    let macroNxt = new Uint8Array(MACRO_N);
+    let macroInput = new Uint8Array(MACRO_SENSOR_N);
+    let macroObs = new Uint8Array(MACRO_SENSOR_N);
+    let macroSegPulse = new Float32Array(8);
+    let macroActive = false;
+    let macroLastGeom = null;
+
+    const AV_EXTR_N = 64;
+    /** Micro-timesteps per row of the raster (columns 0 … WINDOW−1); t=0 is leftmost. */
+    const AV_EXTR_WINDOW_T = 260;
+    let avExtrCtx = null;
+    let avExtrState = new Uint8Array(AV_EXTR_N);
+    let avExtrHist = [];
+    let avExtrCascadeActive = false;
+    let avExtrAccSteps = 0;
+    let avExtrAccSize = 0;
+
+    function resizeResCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = resCanvas.getBoundingClientRect();
+      const cssW = Math.max(320, Math.floor(rect.width));
+      const cssH = Math.max(180, Math.floor(rect.height));
+      resCanvas.width = Math.floor(cssW * dpr);
+      resCanvas.height = Math.floor(cssH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function resizeMacroCanvas() {
+      if (!macroCanvas) return;
+      const dpr = window.devicePixelRatio || 1;
+      const rect = macroCanvas.getBoundingClientRect();
+      const cssW = Math.max(320, Math.floor(rect.width));
+      const cssH = Math.max(220, Math.floor(rect.height));
+      macroCanvas.width = Math.floor(cssW * dpr);
+      macroCanvas.height = Math.floor(cssH * dpr);
+      const mctx = macroCanvas.getContext("2d");
+      mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function resizeAvExtrCanvas() {
+      if (!avExtrCanvas) return;
+      const dpr = window.devicePixelRatio || 1;
+      const rect = avExtrCanvas.getBoundingClientRect();
+      const cssW = Math.max(320, Math.floor(rect.width));
+      const cssH = Math.max(180, Math.floor(rect.height));
+      avExtrCanvas.width = Math.floor(cssW * dpr);
+      avExtrCanvas.height = Math.floor(cssH * dpr);
+      avExtrCtx = avExtrCanvas.getContext("2d");
+      avExtrCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function sliderCentiToUnit(sliderEl, fallbackCenti = 100) {
+      const v = Number(sliderEl && sliderEl.value);
+      return (Number.isFinite(v) ? v : fallbackCenti) / 100;
+    }
+
+    function avExtrP() {
+      const s = sliderCentiToUnit(avExtrSigmaSl);
+      return s / (AV_EXTR_N - 1);
+    }
+
+    function updateAvExtrInfoAfterCascade() {
+      if (!avExtrInfo) return;
+      avExtrInfo.textContent =
+        "Complete cascade — integrated size (sum over time of active counts, incl. seed at t=0): " +
+        avExtrAccSize +
+        " · duration (steps): " +
+        avExtrAccSteps;
+    }
+
+    function updateAvExtrInfoCensored() {
+      if (!avExtrInfo) return;
+      avExtrInfo.textContent =
+        "Window full (" +
+        AV_EXTR_WINDOW_T +
+        " steps) with ongoing activity — cascade not fully observed (censored). " +
+        "Partial integrated size (incl. seed at t=0): " +
+        avExtrAccSize +
+        ".";
+    }
+
+    function stepAvExtrOnce() {
+      if (!avExtrCascadeActive) return;
+      const nAct = countActiveRange(avExtrState, 0, AV_EXTR_N);
+      if (nAct === 0) {
+        avExtrCascadeActive = false;
+        updateAvExtrInfoAfterCascade();
+        return;
+      }
+      const nxt = new Uint8Array(AV_EXTR_N);
+      reservoirStepRange(avExtrState, nxt, 0, AV_EXTR_N, avExtrP());
+      avExtrState = nxt;
+      avExtrHist.push(avExtrState.slice());
+      avExtrAccSteps++;
+      avExtrAccSize += countActiveRange(avExtrState, 0, AV_EXTR_N);
+      const dead = countActiveRange(avExtrState, 0, AV_EXTR_N) === 0;
+      if (dead) {
+        avExtrCascadeActive = false;
+        updateAvExtrInfoAfterCascade();
+        return;
+      }
+      if (avExtrHist.length >= AV_EXTR_WINDOW_T) {
+        avExtrCascadeActive = false;
+        updateAvExtrInfoCensored();
+      }
+    }
+
+    function fireAvExtrCascade() {
+      avExtrHist = [];
+      avExtrState = new Uint8Array(AV_EXTR_N);
+      avExtrState[Math.floor(Math.random() * AV_EXTR_N)] = 1;
+      avExtrHist.push(avExtrState.slice());
+      avExtrAccSteps = 1;
+      avExtrAccSize = 1;
+      avExtrCascadeActive = true;
+      if (avExtrInfo) avExtrInfo.textContent = "";
+    }
+
+    function drawAvExtrRaster() {
+      if (!avExtrCanvas || !avExtrCtx) return;
+      const W = avExtrCanvas.clientWidth || 860;
+      const H = avExtrCanvas.clientHeight || 220;
+      avExtrCtx.clearRect(0, 0, W, H);
+      avExtrCtx.fillStyle = "#090909";
+      avExtrCtx.fillRect(0, 0, W, H);
+
+      const marginL = 44;
+      const marginR = 12;
+      const marginT = 10;
+      const marginB = 46;
+      const plotW = Math.max(1, W - marginL - marginR);
+      const plotH = Math.max(1, H - marginT - marginB);
+
+      const totalCols = Math.max(1, AV_EXTR_WINDOW_T);
+      const cellW = plotW / totalCols;
+      const cellH = plotH / AV_EXTR_N;
+
+      for (let x = 0; x < avExtrHist.length; x++) {
+        const col = avExtrHist[x];
+        for (let y = 0; y < AV_EXTR_N; y++) {
+          if (!col[y]) continue;
+          avExtrCtx.fillStyle = "rgba(252,255,164,0.95)";
+          avExtrCtx.fillRect(
+            marginL + x * cellW,
+            marginT + y * cellH,
+            Math.max(1, cellW),
+            Math.max(1, cellH)
+          );
+        }
+      }
+
+      avExtrCtx.strokeStyle = "rgba(255,255,255,0.22)";
+      avExtrCtx.lineWidth = 1;
+      avExtrCtx.strokeRect(marginL, marginT, plotW, plotH);
+
+      avExtrCtx.fillStyle = "rgba(210,210,210,0.9)";
+      avExtrCtx.font = "11px system-ui, -apple-system, sans-serif";
+
+      avExtrCtx.save();
+      avExtrCtx.translate(18, marginT + plotH * 0.5);
+      avExtrCtx.rotate(-Math.PI / 2);
+      avExtrCtx.textAlign = "center";
+      avExtrCtx.textBaseline = "middle";
+      avExtrCtx.fillText("Neuron / agent index", 0, 0);
+      avExtrCtx.restore();
+
+      avExtrCtx.textAlign = "right";
+      avExtrCtx.textBaseline = "top";
+      avExtrCtx.fillText("0", marginL - 6, marginT);
+      avExtrCtx.textBaseline = "bottom";
+      avExtrCtx.fillText(String(AV_EXTR_N - 1), marginL - 6, marginT + plotH);
+
+      avExtrCtx.textAlign = "center";
+      avExtrCtx.textBaseline = "top";
+      avExtrCtx.fillText("Time", marginL + plotW * 0.5, marginT + plotH + 22);
+      avExtrCtx.textAlign = "left";
+      avExtrCtx.textBaseline = "top";
+      avExtrCtx.fillText("0", marginL, marginT + plotH + 4);
+      avExtrCtx.textAlign = "right";
+      avExtrCtx.fillText(String(AV_EXTR_WINDOW_T - 1), marginL + plotW, marginT + plotH + 4);
+    }
+
+    function resetMacroState() {
+      const sensN = Math.max(4, Number(macroSens.value) || 8);
+      macroRes = new Uint8Array(MACRO_N);
+      macroNxt = new Uint8Array(MACRO_N);
+      macroInput = new Uint8Array(MACRO_SENSOR_N);
+      macroObs = new Uint8Array(MACRO_SENSOR_N);
+      macroSegPulse = new Float32Array(sensN);
+      macroActive = false;
+    }
+
+    function stepMacroCycle() {
+      const sigma = sliderCentiToUnit(macroP);
+      const pMicro = sigma / (MACRO_N - 1);
+      const sensN = macroObs.length;
+      const MICRO_LOCAL = 5;
+      for (let m = 0; m < MICRO_LOCAL; m++) {
+        reservoirStepRange(macroRes, macroNxt, 0, MACRO_N, pMicro);
+        if (m === 0) {
+          for (let k = 0; k < sensN; k++) macroNxt[k] = macroObs[k];
+        }
+        macroRes.set(macroNxt);
+      }
+      macroInput.fill(0);
+      macroObs.fill(0);
+      macroActive = countActiveRange(macroRes, 0, MACRO_N) > 0;
+    }
+
+    function buildMacroNodes(cx, cy, baseR, segN) {
+      const nodes = [];
+      const dTheta = (Math.PI * 2) / segN;
+      const sensOrbitR = baseR * 0.80;
+      for (let i = 0; i < MACRO_SENSOR_N; i++) {
+        const segIdx = Math.floor((i * segN) / MACRO_SENSOR_N) % segN;
+        const aMid = macroHeading + (segIdx + 0.5) * dTheta;
+        nodes.push({ x: cx + Math.cos(aMid) * sensOrbitR, y: cy + Math.sin(aMid) * sensOrbitR, kind: "sensor" });
+      }
+      const innerCount = MACRO_N - MACRO_SENSOR_N - 1;
+      const golden = Math.PI * (3 - Math.sqrt(5));
+      const innerMinR = baseR * 0.12;
+      const innerMaxR = baseR * 0.65;
+      for (let i = 0; i < innerCount; i++) {
+        const t = (i + 0.5) / Math.max(1, innerCount);
+        const rr = innerMinR + (innerMaxR - innerMinR) * Math.sqrt(t);
+        const a = i * golden + macroHeading * 0.4;
+        nodes.push({ x: cx + Math.cos(a) * rr, y: cy + Math.sin(a) * rr, kind: "inner" });
+      }
+      nodes.push({ x: cx, y: cy, kind: "light" });
+      return nodes;
+    }
+
+    function resetReservoirDemo() {
+      window.rdN = Number(nSlider.value);
+      window.rdSigma = Number(sigmaSlider.value) / 100;
+      window.DEMO_T = 260;
+      window.rdState = new Uint8Array(window.rdN);
+      window.rdHist = [];
+      const seed = Math.floor(Math.random() * window.rdN);
+      window.rdState[seed] = 1;
+      reseedFlash = 6;
+      nVal.textContent = String(window.rdN);
+      sigmaVal.textContent = window.rdSigma.toFixed(2);
+    }
+
+    function drawResRaster() {
+      const W = resCanvas.clientWidth || 860;
+      const H = resCanvas.clientHeight || 220;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = "#090909";
+      ctx.fillRect(0, 0, W, H);
+
+      const totalCols = Math.max(1, window.DEMO_T || 260);
+      const cellW = W / totalCols;
+      const cellH = H / Math.max(1, window.rdN);
+      const startCol = Math.max(0, totalCols - window.rdHist.length);
+
+      for (let x = 0; x < window.rdHist.length; x++) {
+        const col = window.rdHist[x];
+        for (let y = 0; y < window.rdN; y++) {
+          if (!col[y]) continue;
+          ctx.fillStyle = "rgba(252,255,164,0.95)";
+          ctx.fillRect((startCol + x) * cellW, y * cellH, Math.max(1, cellW), Math.max(1, cellH));
+        }
+      }
+
+      if (reseedFlash > 0) {
+        const a = reseedFlash / 6;
+        ctx.strokeStyle = `rgba(231,116,36,${a.toFixed(3)})`;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(1, 1, W - 2, H - 2);
+        reseedFlash--;
+      }
+
+      info.textContent = "";
+    }
+
+    function stepWithReseedCue() {
+      const wasDead = countActiveRange(window.rdState, 0, window.rdN) === 0;
+      rdStep();
+      if (wasDead) reseedFlash = 6;
+    }
+
+    function drawMacroAgent() {
+      if (!macroCanvas || !macroP || !macroVr || !macroSens) return;
+      const mctx = macroCanvas.getContext("2d");
+      const W = macroCanvas.clientWidth || 860;
+      const H = macroCanvas.clientHeight || 220;
+      const cx = W * 0.5;
+      const cy = H * 0.5;
+
+      mctx.clearRect(0, 0, W, H);
+      mctx.fillStyle = "#0a0a0a";
+      mctx.fillRect(0, 0, W, H);
+
+      const sensN = Math.max(4, Number(macroSens.value) || 8);
+      const vr = Number(macroVr.value) || 70;
+      const sigma = sliderCentiToUnit(macroP);
+      const baseR = Math.min(W, H) * 0.15;
+      const minSide = Math.min(W, H);
+      const pad = 22;
+      const maxVisR = Math.max(baseR + 10, (minSide * 0.5) - pad);
+      const minVisR = Math.max(baseR + 10, maxVisR * 0.45);
+      const vrNorm = Math.max(0, Math.min(1, (vr - 20) / (120 - 20)));
+      const visR = minVisR + (maxVisR - minVisR) * vrNorm;
+      const dTheta = (Math.PI * 2) / sensN;
+
+      for (let i = 0; i < sensN; i++) {
+        const a0 = macroHeading + i * dTheta;
+        const a1 = a0 + dTheta;
+        const pulse = Math.max(0, Math.min(1, macroSegPulse[i]));
+        mctx.beginPath();
+        mctx.moveTo(cx, cy);
+        mctx.arc(cx, cy, visR, a0, a1);
+        mctx.closePath();
+        const eased = Math.pow(pulse, 1.35);
+        mctx.fillStyle = `rgba(${Math.round(36 + (252 - 36) * eased)},${Math.round(36 + (243 - 36) * eased)},${Math.round(36 + (136 - 36) * eased)},0.62)`;
+        mctx.fill();
+      }
+
+      // Draw explicit bin separators so odd sensor counts read as equal angles.
+      mctx.strokeStyle = "rgba(240,240,240,0.68)";
+      mctx.lineWidth = 1;
+      for (let i = 0; i < sensN; i++) {
+        const a = macroHeading + i * dTheta;
+        mctx.beginPath();
+        mctx.moveTo(cx, cy);
+        mctx.lineTo(cx + Math.cos(a) * visR, cy + Math.sin(a) * visR);
+        mctx.stroke();
+      }
+
+      mctx.beginPath();
+      mctx.arc(cx, cy, visR, 0, Math.PI * 2);
+      mctx.strokeStyle = "rgba(240,240,240,0.68)";
+      mctx.lineWidth = 1.25;
+      mctx.stroke();
+
+      // Agent body.
+      mctx.beginPath();
+      mctx.arc(cx, cy, baseR, 0, Math.PI * 2);
+      mctx.fillStyle = "rgba(10,10,10,0.96)";
+      mctx.fill();
+      mctx.strokeStyle = "rgba(255,255,255,0.85)";
+      mctx.lineWidth = 2;
+      mctx.stroke();
+
+      const netNodes = buildMacroNodes(cx, cy, baseR, sensN);
+
+      // Fully connected network edges.
+      mctx.strokeStyle = "rgba(255,255,255,0.12)";
+      mctx.lineWidth = 0.8;
+      for (let i = 0; i < netNodes.length; i++) {
+        for (let j = i + 1; j < netNodes.length; j++) {
+          mctx.beginPath();
+          mctx.moveTo(netNodes[i].x, netNodes[i].y);
+          mctx.lineTo(netNodes[j].x, netNodes[j].y);
+          mctx.stroke();
+        }
+      }
+
+      // Draw nodes on top of edges.
+      const sensNodeR = Math.max(2, baseR * 0.08);
+      const innerNodeR = Math.max(1.4, baseR * 0.045);
+      const lightNodeR = Math.max(2.8, baseR * 0.10);
+      for (let i = 0; i < netNodes.length; i++) {
+        const n = netNodes[i];
+        const on = macroRes[i] === 1;
+        let r = innerNodeR;
+        if (n.kind === "sensor") r = sensNodeR;
+        if (n.kind === "light") r = lightNodeR;
+        mctx.beginPath();
+        mctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+        if (on) {
+          mctx.fillStyle = n.kind === "light" ? "rgba(252,255,164,0.95)" : "rgba(240,240,240,0.95)";
+        } else {
+          mctx.fillStyle = n.kind === "sensor" ? "rgba(110,110,110,0.85)" : "rgba(58,58,58,0.9)";
+        }
+        mctx.fill();
+      }
+
+      for (let i = 0; i < macroSegPulse.length; i++) macroSegPulse[i] *= 0.94;
+      macroLastGeom = { cx, cy, baseR, visR, dTheta, sensN };
+
+      macroPVal.textContent = sigma.toFixed(2);
+      macroVrVal.textContent = String(vr);
+      macroSensVal.textContent = String(sensN);
+      if (macroInfo) macroInfo.textContent = "";
+    }
+
+    function tick() {
+      if (running) {
+        stepWithReseedCue();
+        stepWithReseedCue();
+        drawResRaster();
+      }
+      if (avExtrCascadeActive) {
+        stepAvExtrOnce();
+        stepAvExtrOnce();
+      }
+      if (macroActive || countActiveRange(macroObs, 0, macroObs.length) > 0) {
+        stepMacroCycle();
+      }
+      drawMacroAgent();
+      drawAvExtrRaster();
+      rafId = requestAnimationFrame(tick);
+    }
+
+    nSlider.addEventListener("input", () => {
+      resetReservoirDemo();
+      drawResRaster();
+    });
+    sigmaSlider.addEventListener("input", () => {
+      window.rdSigma = Number(sigmaSlider.value) / 100;
+      sigmaVal.textContent = window.rdSigma.toFixed(2);
+      drawResRaster();
+    });
+    playBtn.addEventListener("click", () => {
+      running = !running;
+      playBtn.textContent = running ? "\u25ae\u25ae Pause" : "\u25b6 Play";
+    });
+    if (macroPlayBtn) {
+      macroPlayBtn.addEventListener("click", () => {
+        resetMacroState();
+        drawMacroAgent();
+        macroPlayBtn.textContent = "Clear";
+      });
+      macroPlayBtn.textContent = "Clear";
+    }
+    if (macroP) macroP.addEventListener("input", drawMacroAgent);
+    if (macroVr) macroVr.addEventListener("input", drawMacroAgent);
+    if (macroSens) macroSens.addEventListener("input", drawMacroAgent);
+    if (avExtrSigmaSl && avExtrSigmaVal) {
+      avExtrSigmaSl.addEventListener("input", () => {
+        avExtrSigmaVal.textContent = sliderCentiToUnit(avExtrSigmaSl).toFixed(2);
+        drawAvExtrRaster();
+      });
+    }
+    if (avExtrFireBtn) {
+      avExtrFireBtn.addEventListener("click", () => {
+        fireAvExtrCascade();
+        drawAvExtrRaster();
+      });
+    }
+    if (macroCanvas) {
+      macroCanvas.addEventListener("click", (ev) => {
+        if (!macroLastGeom) return;
+        const rect = macroCanvas.getBoundingClientRect();
+        const x = ev.clientX - rect.left;
+        const y = ev.clientY - rect.top;
+        const dx = x - macroLastGeom.cx;
+        const dy = y - macroLastGeom.cy;
+        const rr = Math.hypot(dx, dy);
+        if (rr < macroLastGeom.baseR || rr > macroLastGeom.visR) return;
+        const a = Math.atan2(dy, dx);
+        const rel = ((a - macroHeading) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+        const idx = Math.floor(rel / macroLastGeom.dTheta);
+        if (idx < 0 || idx >= macroLastGeom.sensN) return;
+        const sensorIdx = Math.floor((idx * MACRO_SENSOR_N) / macroLastGeom.sensN);
+        if (sensorIdx < 0 || sensorIdx >= MACRO_SENSOR_N) return;
+        macroInput[sensorIdx] = 1;
+        macroObs[sensorIdx] = 1;
+        macroSegPulse[idx] = 1;
+        macroActive = true;
+      });
+    }
+    window.addEventListener("resize", () => {
+      resizeResCanvas();
+      resizeMacroCanvas();
+      resizeAvExtrCanvas();
+      drawResRaster();
+      drawMacroAgent();
+      drawAvExtrRaster();
+    });
+
+    resizeResCanvas();
+    resizeMacroCanvas();
+    resizeAvExtrCanvas();
+    resetReservoirDemo();
+    resetMacroState();
+    info.style.display = "none";
+    if (macroInfo) macroInfo.style.display = "none";
+    drawResRaster();
+    drawMacroAgent();
+    drawAvExtrRaster();
+    rafId = requestAnimationFrame(tick);
+    window.addEventListener("beforeunload", () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    });
+  });
+</script>
+</body>
+</html>
+

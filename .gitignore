@@ -1,0 +1,4 @@
+.venv/
+*.npz
+*.yaml
+__pycache__/

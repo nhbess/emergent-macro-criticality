@@ -1,0 +1,33 @@
+[project]
+name = "micro-macro-criticality"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "matplotlib>=3.10.7",
+    "numpy>=2.3.5",
+    "torch>=2.10.0",
+    "tqdm>=4.67.1",
+    "pyyaml",
+    "pandas>=2.3.3",
+    "cma>=4.4.0",
+    "jax>=0.8.1",
+    "imageio-ffmpeg>=0.6.0",
+    "opencv-python>=4.11.0.86",
+    "joypy>=0.2.6",
+    "scikit-learn>=1.8.0",
+    "scikit-image>=0.26.0",
+    "powerlaw>=2.0.0",
+    "plotly>=6.6.0",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
