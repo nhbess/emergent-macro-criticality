@@ -129,29 +129,17 @@
     </div>
 
     <h3>Avalanche Extraction</h3>
-    <p>The same Beggs–Plenz <strong>micro</strong> rule as above, but with a <strong>fixed $N=64$ reservoir</strong>
-    reservoir and <strong>no automatic reseeding</strong>. Each button press seeds a single
-    active neuron at <strong>time 0 on the left</strong>; the raster fills toward the right
-    for up to <strong>260 micro-timesteps</strong> (the observation window). Drag
-    $\sigma$ to see how far a cascade typically spreads before it dies.</p>
-    <p>Two kinds of events are set aside when building serious avalanche statistics — and this
-    demo is meant to mirror that logic. First, cascades that <strong>still have activity when the
-    window ends</strong> are <strong>censored</strong>: their true size and duration are unknown,
-    so they are <strong>excluded</strong> from distributions that require a complete avalanche
-    (in <code>index.html</code>, an avalanche still open at the end of a rep is dropped the same way).
-    Second, <strong>trivial</strong> cascades — those with <strong>no real extent</strong> beyond
-    the minimal initiating pattern (in practice, integrated <strong>size 1</strong>: only the seed
-    column, then immediate quiescence; sometimes described as zero “length” in the sense of no
-    propagated activity) — are too degenerate to inform a power-law tail. They may still appear in
-    raw tallies, but the paper’s MLE uses $x_{\min}=2$ on both size and duration,
-    which <strong>excludes</strong> those smallest events from <strong>fitting</strong> only.</p>
-    <p>The raster uses <strong>micro</strong> dynamics, but the <strong>measurement recipe</strong>
-    is the same one used at <strong>macro</strong> in the live simulator: at each time step, add the
-    number of active <strong>units</strong> (here, neurons in one reservoir; there, agents with the
-    light neuron ON), and sum that over the avalanche until activity hits zero within the window.
-    Only the choice of elementary unit changes; the construction is <strong>scale-independent</strong>.
-    <strong>Time 0 includes the seed</strong>, so the reported size is integrated activity through
-    the cascade, not a separate “postsynaptic-only” count with the drive removed.</p>
+    <p>Avalanche extraction follows the paper&#8217;s event definition on population
+    activity:</p>
+    <p class="math-display">$$A_l(t)=\sum_{i=1}^{N_{\mathrm{agents}}} l_i(t)$$</p>
+    <p>An avalanche starts at $t_s$ when
+    $A_l(t_s-1)=0$ and $A_l(t_s)>0$, and ends at $t_e$ when
+    $A_l(t_e)>0$ and $A_l(t_e+1)=0$. Its duration and size are:</p>
+    <p class="math-display">$$T=t_e-t_s+1,\qquad S=\sum_{t=t_s}^{t_e}A_l(t)$$</p>
+    <p>Avalanches still active at the recording boundary are censored and excluded
+    from analysis. In power-law fitting, the tail cutoff is $x_{\min}=2$ (for
+    both $S$ and $T$); events below this cutoff are not used to estimate
+    exponents.</p>
 
     <div id="av-extr-demo-wrap">
       <canvas id="av-extr-canvas"></canvas>
@@ -165,48 +153,12 @@
         <button type="button" id="av-extr-fire-btn" class="about-btn">Fire one cascade</button>
       </div>
       <p class="eq-center">
-        <em>Note:</em> unlike the scrolling micro-level raster (recent time on the right),
-        here $t=0$ is fixed at the left. A full window with ongoing activity is
-        censored (excluded like an unfinished macro rep). Activity is never reseeded; press the
-        button again for a new realization.
+        <strong>Note:</strong> this demo shows the same extraction logic on a
+        single seeded realization ($t=0$ fixed on the left, 260-step window, no
+        auto-reseed).
       </p>
     </div>
 
-    <h3>Parameters</h3>
-    <p>$v_r$ (vision radius) — spatial coupling range. Larger $v_r$ means more
-    neighbours per agent and stronger macro-level coupling.</p>
-    <p>$p_{\mathrm{micro}}$ — homogeneous connection weight in each reservoir.
-    The reservoir critical point is $p_c = 1/(N-1)$ where $N$ is the
-    number of neurons. Below p_c activity dies; above it, it self-sustains.</p>
-
-    <h3>Avalanche size &amp; duration</h3>
-    <p>An <em>avalanche</em> is a maximal contiguous run of macro steps where at least
-    one agent is lit ($A_l(t)=\sum_i l_i(t)>0$). Its <strong>size</strong>
-    is the cumulative count of active agents summed over all steps in the run;
-    its <strong>duration</strong> is the number of steps. Avalanches that are still
-    active at the end of a rep window are discarded (censored), matching the
-    paper&#8217;s methodology. Smallest (trivial) events are handled separately when
-    estimating power-law exponents ($x_{\min}=2$); see Avalanche Extraction above.</p>
-
-    <h3>Criticality &amp; power laws</h3>
-    <p class="math-display">$$P(x)\propto x^{-\alpha},\quad x_{min}=2$$</p>
-    <p>The MLE exponent &#x3b1; is estimated via the discrete Clauset et al. (2009) formula.</p>
-
-    <h3>Plots</h3>
-    <p><strong>Agent canvas</strong> — live simulation. Edges shown when adjacency
-    is toggled on.</p>
-    <p><strong>$\hat{\sigma}_{\mathrm{eff}}$ curve</strong> — effective branching ratio estimated
-    from pre-computed paper data across $p$ values at the selected vision radius.
-    The dashed vertical line marks the current $p$ setting.</p>
-    <p><strong>Criticality score $\mathcal{L}$ heatmap</strong> — pre-computed from paper
-    data. Each cell is the KS-based goodness-of-fit score for power-law
-    avalanche distributions (higher = more critical). X axis: $p_{\mathrm{micro}}$;
-    Y axis: $v_r$. Click any cell to jump to those parameters.</p>
-    <p><strong>Avalanche distributions (log-log)</strong> — live, accumulated across
-    all reps since the last parameter change. Orange: size distribution;
-    purple: duration distribution. Statistics are from the current single
-    trajectory; supercritical regimes require ensemble averaging (as in the
-    paper) to reveal power-law tails.</p>
   </div>
 </div>
 
