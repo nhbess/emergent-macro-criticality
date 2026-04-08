@@ -12,7 +12,8 @@
     <h1 class="title-inline">
       Micro-Macro Criticality
     </h1>
-    <div id="subtitle">live simulation &nbsp;·&nbsp; 256 agents · 64 neurons · 56 VD × 25 p values</div>
+    <div><a class="back-link" href="about.html">About this simulator</a></div>
+      <div id="subtitle">live simulation &nbsp;·&nbsp; 256 agents · 64 neurons · 56 <i>v</i><sub>r</sub> × 25 <i>p</i><sup>micro</sup> values</div>
   </header>
 
   <div id="main">
@@ -25,7 +26,7 @@
         <canvas class="mini" id="plot-sigma" height="72"></canvas>
       </div>
       <div id="heatmap-wrap">
-        <div id="heatmap-label">CRITICALITY SCORE &nbsp;<span class="ell-symbol">&#x2112;</span> &nbsp;&#183;&nbsp; x=p_micro &#183; y=vision_dist &nbsp;&#183;&nbsp; click to jump</div>
+        <div id="heatmap-label">CRITICALITY SCORE &nbsp;<span class="ell-symbol">&#x2112;</span> &nbsp;&#183;&nbsp; x=<i>p</i><sup>micro</sup> &#183; y=<i>v</i><sub>r</sub> &nbsp;&#183;&nbsp; click to jump</div>
         <canvas id="heatmap" height="210"></canvas>
       </div>
       <div class="mini-wrap">
@@ -39,12 +40,12 @@
 
 <div id="controls">
     <div class="slider-row">
-      <span class="sl-label">vision dist</span>
+      <span class="sl-label"><i>v</i><sub>r</sub> (vision radius)</span>
       <input type="range" class="sl-track" id="vd-sl" min="0" value="0">
       <span class="sl-val" id="vd-disp">&#8212;</span>
     </div>
     <div class="slider-row">
-      <span class="sl-label">p_micro</span>
+      <span class="sl-label"><i>p</i><sup>micro</sup></span>
       <input type="range" class="sl-track" id="p-sl" min="0" value="0">
       <span class="sl-val" id="p-disp">&#8212;</span>
     </div>

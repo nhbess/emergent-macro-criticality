@@ -14,6 +14,7 @@
       Micro-Macro Criticality
       <span class="subtitle-note">· About</span>
     </h1>
+    <div><a class="back-link" href="index.html">Go to live simulation</a></div>
   </header>
 
   <div id="info-box-modal">
@@ -76,7 +77,10 @@
         <button id="res-play-btn" class="about-btn">&#9656; Play</button>
       </div>
       <p class="eq-center">
-        <em>Note:</em> this demo auto-seeds whenever activity fully dies; the brief flashing frame indicates a reseeding event.
+        <strong>What is this?</strong> A single-reservoir raster (rows = neurons, columns = time)
+        under the micro rule. Use $\sigma$ and $N$ to explore regimes, and press
+        Play/Pause to run. When activity dies out, the demo auto-reseeds; the
+        brief flashing border marks a reseeding event.
       </p>
     </div>
 
@@ -122,9 +126,14 @@
         </div>
       </div>
       <p class="eq-center">
-        <strong>Note:</strong> this canvas is a pedagogical schematic of coupling
-        (single agent + sensory sectors). Click sectors to generate observations
-        and trigger reservoir activity.
+        <strong>What is this?</strong> A pedagogical coupling sketch (single agent +
+        sensory sectors). Agents only receive observations from other agents when
+        those agents are ON <em>and</em> inside the focal agent&#8217;s vision field
+        ($v_r$ and angular sectors). The circular pointer represents another
+        agent&#8217;s light source: gray means inactive, yellow means ON. Click or
+        hold in a sector to continuously stream that external light input and
+        trigger reservoir activity. Adjust $\sigma$, $v_r$, and $E$ to see how
+        sensing geometry and micro dynamics change the response.
       </p>
     </div>
 
@@ -153,11 +162,34 @@
         <button type="button" id="av-extr-fire-btn" class="about-btn">Fire one cascade</button>
       </div>
       <p class="eq-center">
-        <strong>Note:</strong> this demo shows the same extraction logic on a
-        single seeded realization ($t=0$ fixed on the left, 260-step window, no
-        auto-reseed).
+        <strong>What is this?</strong> A single-cascade extraction demo. Press
+        <em>Fire one cascade</em> to seed one event at $t=0$ (left), then read the
+        reported $T$ and $S$. Cascades that do not end within the 260-step window
+        are marked censored; events with $S=1$ are flagged as below $x_{\min}=2$
+        for fitting.
       </p>
     </div>
+
+    <h3>Power-law fitting (paper vs live preview)</h3>
+    <p><strong>Paper methodology.</strong> In the paper, avalanche size and duration
+    are fitted with a discrete power-law model
+    $P(x)=x^{-\alpha}/\zeta(\alpha,x_{\min})$ for $x\ge x_{\min}$, following the
+    Clauset framework. The cutoff $x_{\min}$ is selected by minimizing the
+    Kolmogorov&#8211;Smirnov distance, then $\alpha$ is estimated by maximum
+    likelihood on the fitted tail. The paper analysis also uses KS-based
+    goodness-of-fit terms (and related fit diagnostics) in the criticality
+    score $\mathcal{L}(p^{\mathrm{micro}},v_r)$.</p>
+    <p><strong>Live viewer methodology.</strong> For real-time interaction, the live
+    simulation uses a simplified estimator: fixed $x_{\min}=2$ and a fast
+    closed-form discrete MLE for $\alpha$ from the currently accumulated
+    avalanches. This preview fit does <strong>not</strong> run the full
+    $x_{\min}$ search/KS optimization pipeline from the paper at every frame.
+    The goal is responsiveness during exploration, not reproducing the full
+    offline fitting workflow in real time.</p>
+    <p><strong>Practical interpretation.</strong> Use the live fit as an immediate
+    qualitative indicator while interacting with parameters. For quantitative
+    claims, see the paper repository:
+    <a href="https://github.com/nhbess/micro-macro-criticality">https://github.com/nhbess/micro-macro-criticality</a>.</p>
 
   </div>
 </div>
@@ -215,6 +247,9 @@
     let macroSegPulse = new Float32Array(8);
     let macroActive = false;
     let macroLastGeom = null;
+    let macroHover = null;
+    let macroInfoFrames = 0;
+    let macroPointerDown = false;
 
     const AV_EXTR_N = 64;
     /** Micro-timesteps per row of the raster (columns 0 … WINDOW−1); t=0 is leftmost. */
@@ -248,6 +283,15 @@
       mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
+    function updateMacroCanvasLayout() {
+      if (!macroCanvas) return;
+      const vr = Number(macroVr && macroVr.value) || 70;
+      const t = Math.max(0, Math.min(1, (vr - 20) / (120 - 20)));
+      // Smaller vr -> tighter panel; larger vr -> more room for larger sectors.
+      const cssH = Math.round(260 + t * 240);
+      macroCanvas.style.height = `${cssH}px`;
+    }
+
     function resizeAvExtrCanvas() {
       if (!avExtrCanvas) return;
       const dpr = window.devicePixelRatio || 1;
@@ -279,22 +323,28 @@
 
     function updateAvExtrInfoAfterCascade() {
       if (!avExtrInfo) return;
+      const discardedBySize = avExtrAccSize <= 1;
       avExtrInfo.textContent =
-        "Complete cascade — integrated size (sum over time of active counts, incl. seed at t=0): " +
+        "Cascade result: T=" +
+        avExtrAccSteps +
+        ", S=" +
         avExtrAccSize +
-        " · duration (steps): " +
-        avExtrAccSteps;
+        ". " +
+        (discardedBySize
+          ? "Discarded for fitting: S=1 is below x_min=2."
+          : "Complete cascade: kept (not censored).");
     }
 
     function updateAvExtrInfoCensored() {
       if (!avExtrInfo) return;
       avExtrInfo.textContent =
-        "Window full (" +
-        AV_EXTR_WINDOW_T +
-        " steps) with ongoing activity — cascade not fully observed (censored). " +
-        "Partial integrated size (incl. seed at t=0): " +
+        "Cascade result: T=" +
+        avExtrAccSteps +
+        ", S=" +
         avExtrAccSize +
-        ".";
+        ". Discarded: censored (activity did not end within " +
+        AV_EXTR_WINDOW_T +
+        " steps).";
     }
 
     function stepAvExtrOnce() {
@@ -331,7 +381,10 @@
       avExtrAccSteps = 1;
       avExtrAccSize = 1;
       avExtrCascadeActive = true;
-      if (avExtrInfo) avExtrInfo.textContent = "";
+      if (avExtrInfo) {
+        avExtrInfo.textContent =
+          "Cascade result: T=-, S=-. Running...";
+      }
     }
 
     function drawAvExtrRaster() {
@@ -379,7 +432,7 @@
       avExtrCtx.rotate(-Math.PI / 2);
       avExtrCtx.textAlign = "center";
       avExtrCtx.textBaseline = "middle";
-      avExtrCtx.fillText("Neuron / agent index", 0, 0);
+      avExtrCtx.fillText("Agent index", 0, 0);
       avExtrCtx.restore();
 
       avExtrCtx.textAlign = "right";
@@ -602,6 +655,56 @@
       macroVrVal.textContent = String(vr);
       macroSensVal.textContent = String(sensN);
       if (macroInfo) macroInfo.textContent = "";
+
+      // Custom pointer: gray circle across the whole visualization.
+      if (macroHover) {
+        mctx.beginPath();
+        mctx.arc(macroHover.x, macroHover.y, Math.max(4, baseR * 0.10), 0, Math.PI * 2);
+        if (macroPointerDown) {
+          mctx.fillStyle = "rgba(252,255,164,0.96)";
+        } else {
+          const a = macroHover.inVision ? 0.88 : 0.55;
+          mctx.fillStyle = `rgba(150,150,150,${a})`;
+        }
+        mctx.fill();
+        mctx.strokeStyle = macroPointerDown ? "rgba(252,255,164,0.9)" : "rgba(235,235,235,0.5)";
+        mctx.lineWidth = 1;
+        mctx.stroke();
+      }
+
+      if (macroInfo) {
+        if (macroInfoFrames > 0) {
+          macroInfo.style.display = "";
+          macroInfoFrames--;
+        } else {
+          macroInfo.textContent = "";
+          macroInfo.style.display = "none";
+        }
+      }
+    }
+
+    function handleMacroPointerInteraction(x, y) {
+      if (!macroLastGeom) return;
+      const dx = x - macroLastGeom.cx;
+      const dy = y - macroLastGeom.cy;
+      const rr = Math.hypot(dx, dy);
+      if (rr < macroLastGeom.baseR || rr > macroLastGeom.visR) {
+        if (macroInfo) {
+          macroInfo.textContent = "Outside vision radius: no observation injected.";
+          macroInfoFrames = 120;
+        }
+        return;
+      }
+      const a = Math.atan2(dy, dx);
+      const rel = ((a - macroHeading) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+      const idx = Math.floor(rel / macroLastGeom.dTheta);
+      if (idx < 0 || idx >= macroLastGeom.sensN) return;
+      const sensorIdx = idx;
+      if (sensorIdx < 0 || sensorIdx >= macroObs.length) return;
+      macroInput[sensorIdx] = 1;
+      macroObs[sensorIdx] = 1;
+      macroSegPulse[idx] = 1;
+      macroActive = true;
     }
 
     function tick() {
@@ -609,6 +712,9 @@
         stepWithReseedCue();
         stepWithReseedCue();
         drawResRaster();
+      }
+      if (macroPointerDown && macroHover) {
+        handleMacroPointerInteraction(macroHover.x, macroHover.y);
       }
       if (avExtrCascadeActive) {
         stepAvExtrOnce();
@@ -644,7 +750,13 @@
       macroPlayBtn.textContent = "Clear";
     }
     if (macroP) macroP.addEventListener("input", drawMacroAgent);
-    if (macroVr) macroVr.addEventListener("input", drawMacroAgent);
+    if (macroVr) {
+      macroVr.addEventListener("input", () => {
+        updateMacroCanvasLayout();
+        resizeMacroCanvas();
+        drawMacroAgent();
+      });
+    }
     if (macroSens) {
       macroSens.addEventListener("input", () => {
         resetMacroState();
@@ -664,7 +776,8 @@
       });
     }
     if (macroCanvas) {
-      macroCanvas.addEventListener("click", (ev) => {
+      macroCanvas.style.cursor = "none";
+      macroCanvas.addEventListener("mousemove", (ev) => {
         if (!macroLastGeom) return;
         const rect = macroCanvas.getBoundingClientRect();
         const x = ev.clientX - rect.left;
@@ -672,21 +785,36 @@
         const dx = x - macroLastGeom.cx;
         const dy = y - macroLastGeom.cy;
         const rr = Math.hypot(dx, dy);
-        if (rr < macroLastGeom.baseR || rr > macroLastGeom.visR) return;
-        const a = Math.atan2(dy, dx);
-        const rel = ((a - macroHeading) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-        const idx = Math.floor(rel / macroLastGeom.dTheta);
-        if (idx < 0 || idx >= macroLastGeom.sensN) return;
-        const sensorIdx = idx;
-        if (sensorIdx < 0 || sensorIdx >= macroObs.length) return;
-        macroInput[sensorIdx] = 1;
-        macroObs[sensorIdx] = 1;
-        macroSegPulse[idx] = 1;
-        macroActive = true;
+        const inVision = rr >= macroLastGeom.baseR && rr <= macroLastGeom.visR;
+        macroHover = { x, y, inVision };
+        if (macroPointerDown) {
+          handleMacroPointerInteraction(x, y);
+        }
+      });
+      macroCanvas.addEventListener("mousedown", (ev) => {
+        macroPointerDown = true;
+        const rect = macroCanvas.getBoundingClientRect();
+        const x = ev.clientX - rect.left;
+        const y = ev.clientY - rect.top;
+        handleMacroPointerInteraction(x, y);
+      });
+      window.addEventListener("mouseup", () => {
+        macroPointerDown = false;
+      });
+      macroCanvas.addEventListener("mouseleave", () => {
+        macroHover = null;
+        macroPointerDown = false;
+      });
+      macroCanvas.addEventListener("click", (ev) => {
+        const rect = macroCanvas.getBoundingClientRect();
+        const x = ev.clientX - rect.left;
+        const y = ev.clientY - rect.top;
+        handleMacroPointerInteraction(x, y);
       });
     }
     window.addEventListener("resize", () => {
       resizeResCanvas();
+      updateMacroCanvasLayout();
       resizeMacroCanvas();
       resizeAvExtrCanvas();
       drawResRaster();
@@ -695,6 +823,7 @@
     });
 
     resizeResCanvas();
+    updateMacroCanvasLayout();
     resizeMacroCanvas();
     resizeAvExtrCanvas();
     resetReservoirDemo();
@@ -703,6 +832,9 @@
     if (macroInfo) macroInfo.style.display = "none";
     drawResRaster();
     drawMacroAgent();
+    if (avExtrInfo) {
+      avExtrInfo.textContent = "Cascade result: T=-, S=-.";
+    }
     drawAvExtrRaster();
     rafId = requestAnimationFrame(tick);
     window.addEventListener("beforeunload", () => {
